@@ -7,8 +7,6 @@
 let currentUser = null;
 let isAdmin = false;
 let allListings = [];
-let otpTimers = {};
-let generatedOTP = {};
 
 // ============================================================
 // Initialize
@@ -18,7 +16,23 @@ document.addEventListener('DOMContentLoaded', () => {
     initAuth();
     loadListings();
     updateStats();
+    initSecretAdminAccess();
+    
+    // Check URL for admin access
+    if (window.location.hash === '#admin' || window.location.pathname.includes('/admin')) {
+        showAdminLogin();
+    }
 });
+
+// Secret Admin Access - Ctrl+Shift+A or URL /admin or #admin
+function initSecretAdminAccess() {
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+            e.preventDefault();
+            showAdminLogin();
+        }
+    });
+}
 
 function initAuth() {
     auth.onAuthStateChanged(async (user) => {
@@ -64,12 +78,16 @@ function updateUIForUser() {
     document.getElementById('userName').textContent = currentUser?.username || 'User';
     document.getElementById('userCoins').textContent = (currentUser?.coins || 0).toLocaleString();
     if (currentUser?.avatar) document.getElementById('userAvatar').src = currentUser.avatar;
+    // Show chat widget for logged in users
+    document.getElementById('chatWidget').style.display = 'block';
+    loadUserChatMessages();
 }
 
 function updateUIForGuest() {
     document.getElementById('btnAuth').style.display = 'block';
     document.getElementById('userMenu').style.display = 'none';
     document.getElementById('coinsDisplay').style.display = 'none';
+    document.getElementById('chatWidget').style.display = 'none';
 }
 
 // ============================================================
@@ -87,87 +105,131 @@ async function loginWithGoogle() {
 }
 
 // ============================================================
-// OTP Functions (Demo Mode)
+// Email/Password Login & Register
 // ============================================================
-function sendOTP(type) {
-    const phone = document.getElementById(type === 'login' ? 'loginPhone' : 'registerPhone').value;
-    if (!phone || phone.length !== 10) {
-        showToast('กรุณากรอกเบอร์โทร 10 หลัก', 'error');
-        return;
-    }
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    generatedOTP[phone] = otp;
-    document.getElementById(type + 'OtpGroup').style.display = 'block';
-    startOTPTimer(type);
-    showToast('OTP: ' + otp + ' (Demo)', 'success');
-}
-
-function startOTPTimer(type) {
-    let time = 60;
-    const el = document.getElementById(type + 'Timer');
-    const btn = document.getElementById(type + 'Resend');
-    if (otpTimers[type]) clearInterval(otpTimers[type]);
-    btn.disabled = true;
-    otpTimers[type] = setInterval(() => {
-        time--;
-        el.textContent = time;
-        if (time <= 0) {
-            clearInterval(otpTimers[type]);
-            btn.disabled = false;
-        }
-    }, 1000);
-}
-
-function handleOtpInput(input, idx, type) {
-    if (input.value.length === 1) {
-        const inputs = input.parentElement.querySelectorAll('input');
-        if (idx < 5) inputs[idx + 1].focus();
-    }
-}
-
-async function verifyOTP(type) {
-    const phone = document.getElementById(type === 'login' ? 'loginPhone' : 'registerPhone').value;
-    const inputs = document.querySelectorAll('#' + type + 'OtpGroup .otp-inputs input');
-    const otp = Array.from(inputs).map(i => i.value).join('');
+async function loginWithEmail() {
+    const usernameOrEmail = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
     
-    if (otp !== generatedOTP[phone]) {
-        showToast('OTP ไม่ถูกต้อง', 'error');
+    if (!usernameOrEmail || !password) {
+        showToast('กรุณากรอกข้อมูลให้ครบ', 'error');
         return;
     }
     
-    if (type === 'login') {
-        const snap = await db.collection('users').where('phone', '==', phone).get();
-        if (snap.empty) {
-            showToast('ไม่พบบัญชี กรุณาสมัครสมาชิก', 'error');
+    try {
+        // Check if input is email or username
+        let email = usernameOrEmail;
+        
+        // If not email format, search by username
+        if (!usernameOrEmail.includes('@')) {
+            const userSnap = await db.collection('users').where('username', '==', usernameOrEmail).get();
+            if (userSnap.empty) {
+                showToast('ไม่พบ Username นี้', 'error');
+                return;
+            }
+            email = userSnap.docs[0].data().email;
+        }
+        
+        // Login with Firebase Auth
+        await auth.signInWithEmailAndPassword(email, password);
+        closeModal('authModal');
+        showToast('เข้าสู่ระบบสำเร็จ!', 'success');
+        
+        // Clear form
+        document.getElementById('loginUsername').value = '';
+        document.getElementById('loginPassword').value = '';
+    } catch (e) {
+        console.error('Login error:', e);
+        if (e.code === 'auth/user-not-found') {
+            showToast('ไม่พบบัญชีนี้', 'error');
+        } else if (e.code === 'auth/wrong-password') {
+            showToast('รหัสผ่านไม่ถูกต้อง', 'error');
+        } else if (e.code === 'auth/invalid-email') {
+            showToast('รูปแบบ Email ไม่ถูกต้อง', 'error');
+        } else {
+            showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+        }
+    }
+}
+
+async function registerWithEmail() {
+    const email = document.getElementById('registerEmail').value.trim();
+    const username = document.getElementById('registerUsername').value.trim();
+    const password = document.getElementById('registerPassword').value;
+    const confirmPassword = document.getElementById('registerConfirmPassword').value;
+    
+    // Validation
+    if (!email || !username || !password || !confirmPassword) {
+        showToast('กรุณากรอกข้อมูลให้ครบ', 'error');
+        return;
+    }
+    
+    if (!email.includes('@')) {
+        showToast('รูปแบบ Email ไม่ถูกต้อง', 'error');
+        return;
+    }
+    
+    if (username.length < 3) {
+        showToast('Username ต้องมีอย่างน้อย 3 ตัวอักษร', 'error');
+        return;
+    }
+    
+    if (password.length < 6) {
+        showToast('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร', 'error');
+        return;
+    }
+    
+    if (password !== confirmPassword) {
+        showToast('รหัสผ่านไม่ตรงกัน', 'error');
+        return;
+    }
+    
+    try {
+        // Check if username already exists
+        const existingUser = await db.collection('users').where('username', '==', username).get();
+        if (!existingUser.empty) {
+            showToast('Username นี้ถูกใช้แล้ว', 'error');
             return;
         }
-        currentUser = { id: snap.docs[0].id, ...snap.docs[0].data() };
-    } else {
-        const username = document.getElementById('registerUsername').value;
-        const userType = document.querySelector('input[name="userType"]:checked')?.value || 'both';
-        if (!username) {
-            showToast('กรุณากรอกชื่อผู้ใช้', 'error');
-            return;
-        }
-        const exists = await db.collection('users').where('phone', '==', phone).get();
-        if (!exists.empty) {
-            showToast('เบอร์นี้ลงทะเบียนแล้ว', 'error');
-            return;
-        }
-        const newUser = {
-            username, phone, email: '', coins: 100, userType,
-            avatar: 'https://ui-avatars.com/api/?name=' + username + '&background=ff4655&color=fff',
+        
+        // Create user with Firebase Auth
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+        
+        // Update display name
+        await user.updateProfile({ displayName: username });
+        
+        // Create user document in Firestore
+        await db.collection('users').doc(user.uid).set({
+            username,
+            email,
+            avatar: 'https://ui-avatars.com/api/?name=' + encodeURIComponent(username) + '&background=ff4655&color=fff',
+            coins: 100,
             membership: { tier: 'none' },
             stats: { totalSales: 0, totalPurchases: 0, rating: 0 },
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        const ref = await db.collection('users').add(newUser);
-        currentUser = { id: ref.id, ...newUser };
-        showToast('สมัครสำเร็จ! ได้รับ 100 Coins', 'success');
+        });
+        
+        closeModal('authModal');
+        showToast('สมัครสมาชิกสำเร็จ! ได้รับ 100 Coins ฟรี', 'success');
+        
+        // Clear form
+        document.getElementById('registerEmail').value = '';
+        document.getElementById('registerUsername').value = '';
+        document.getElementById('registerPassword').value = '';
+        document.getElementById('registerConfirmPassword').value = '';
+    } catch (e) {
+        console.error('Register error:', e);
+        if (e.code === 'auth/email-already-in-use') {
+            showToast('Email นี้ถูกใช้แล้ว', 'error');
+        } else if (e.code === 'auth/invalid-email') {
+            showToast('รูปแบบ Email ไม่ถูกต้อง', 'error');
+        } else if (e.code === 'auth/weak-password') {
+            showToast('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร', 'error');
+        } else {
+            showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+        }
     }
-    updateUIForUser();
-    closeModal('authModal');
-    showToast('เข้าสู่ระบบสำเร็จ!', 'success');
 }
 
 function logout() {
@@ -625,111 +687,353 @@ function switchDashboardTab(tab, btn) {
 // ============================================================
 // Admin
 // ============================================================
+let selectedChatUser = null;
+let chatUnsubscribe = null;
+
+// Admin Credentials
+const ADMIN_USERNAME = 'admin';
+const ADMIN_PASSWORD = 'Admin123';
+
 function showAdminLogin() {
     openModal('adminLoginModal');
 }
 
 function loginAdmin() {
-    const pw = document.getElementById('adminPassword').value;
-    if (pw === 'admin123') {
+    const username = document.getElementById('adminUsername').value.trim();
+    const password = document.getElementById('adminPassword').value;
+    
+    if (!username || !password) {
+        showToast('กรุณากรอกข้อมูลให้ครบ', 'error');
+        return;
+    }
+    
+    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
         isAdmin = true;
         closeModal('adminLoginModal');
         showPage('admin');
         loadAdminData();
         showToast('เข้าสู่ระบบ Admin สำเร็จ', 'success');
+        
+        // Clear form
+        document.getElementById('adminUsername').value = '';
+        document.getElementById('adminPassword').value = '';
     } else {
-        showToast('รหัสผ่านไม่ถูกต้อง', 'error');
+        showToast('Username หรือ Password ไม่ถูกต้อง', 'error');
     }
 }
 
 function logoutAdmin() {
     isAdmin = false;
+    if (chatUnsubscribe) chatUnsubscribe();
     showPage('home');
     showToast('ออกจากระบบ Admin', 'success');
 }
 
 async function loadAdminData() {
-    // Load pending listings
+    await loadPendingListings();
+    await loadAllListings();
+    await loadAdminDeposits();
+    await loadAdminWithdrawals();
+    await loadAdminUsers();
+    await loadAdminChats();
+}
+
+// Load Pending Listings with Full Details
+async function loadPendingListings() {
+    const pendingList = document.getElementById('pendingList');
     try {
-        const pendingSnap = await db.collection('listings').where('status', '==', 'pending').get();
-        const pendingList = document.getElementById('pendingList');
-        document.getElementById('badgePending').textContent = pendingSnap.size;
+        const snap = await db.collection('listings').where('status', '==', 'pending').orderBy('createdAt', 'desc').get();
+        document.getElementById('badgePending').textContent = snap.size;
         
-        if (pendingSnap.empty) {
-            pendingList.innerHTML = '<p class="empty">ไม่มีรายการ</p>';
-        } else {
-            pendingList.innerHTML = pendingSnap.docs.map(d => {
-                const l = d.data();
-                return `<div class="admin-item">
-                    <div><strong>${l.title}</strong><br><small>${l.rank} - ${l.skins} Skins - ฿${l.price}</small></div>
-                    <div><button class="btn-approve" onclick="approveListing('${d.id}')"><i class="fas fa-check"></i></button>
-                    <button class="btn-reject" onclick="rejectListing('${d.id}')"><i class="fas fa-times"></i></button></div>
-                </div>`;
-            }).join('');
+        if (snap.empty) {
+            pendingList.innerHTML = '<p class="empty">ไม่มีรายการรออนุมัติ</p>';
+            return;
         }
+        
+        pendingList.innerHTML = snap.docs.map(d => {
+            const l = d.data();
+            const contact = l.contact || {};
+            return `
+                <div class="pending-item">
+                    <div class="pending-item-header">
+                        <h3>${l.title || 'ไม่มีชื่อ'}</h3>
+                        <div class="actions">
+                            <button class="btn-approve" onclick="approveListing('${d.id}')"><i class="fas fa-check"></i> อนุมัติ</button>
+                            <button class="btn-reject" onclick="rejectListing('${d.id}')"><i class="fas fa-times"></i> ปฏิเสธ</button>
+                        </div>
+                    </div>
+                    <div class="pending-item-grid">
+                        <img src="${l.image || 'https://via.placeholder.com/150'}" alt="">
+                        <div class="pending-item-info">
+                            <div class="field"><label>Rank</label><span>${getRankName(l.rank)}</span></div>
+                            <div class="field"><label>จำนวน Skins</label><span>${l.skins || 0}</span></div>
+                            <div class="field"><label>ราคา</label><span>฿${(l.price || 0).toLocaleString()}</span></div>
+                            <div class="field"><label>ประเภทขาย</label><span>${l.sellType === 'instant' ? 'ขายทันที' : 'ลงตลาด'}</span></div>
+                            <div class="field"><label>ผู้ขาย</label><span>${l.sellerName || 'Unknown'}</span></div>
+                            <div class="field"><label>วันที่ส่ง</label><span>${l.createdAt ? new Date(l.createdAt.toDate()).toLocaleDateString('th-TH') : '-'}</span></div>
+                        </div>
+                    </div>
+                    ${l.featuredSkins ? `<div class="field" style="margin-top:10px"><label>Skins เด่น</label><span>${l.featuredSkins}</span></div>` : ''}
+                    ${l.highlights ? `<div class="field" style="margin-top:10px"><label>จุดเด่น</label><span>${l.highlights}</span></div>` : ''}
+                    <div class="pending-item-contacts">
+                        <h4><i class="fas fa-address-book"></i> ข้อมูลติดต่อผู้ขาย</h4>
+                        <div class="contact-list">
+                            ${contact.facebook ? `<span><i class="fab fa-facebook"></i> ${contact.facebook}</span>` : ''}
+                            ${contact.line ? `<span><i class="fab fa-line"></i> ${contact.line}</span>` : ''}
+                            ${contact.discord ? `<span><i class="fab fa-discord"></i> ${contact.discord}</span>` : ''}
+                            ${contact.phone ? `<span><i class="fas fa-phone"></i> ${contact.phone}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     } catch (e) {
-        document.getElementById('pendingList').innerHTML = '<p>Demo Mode</p>';
+        console.error('Load pending error:', e);
+        pendingList.innerHTML = '<p class="empty">เกิดข้อผิดพลาด</p>';
     }
-    
-    // Load deposits
+}
+
+// Load All Listings for Admin with Edit/Delete
+async function loadAllListings() {
+    const container = document.getElementById('adminListingsTable');
     try {
-        const depSnap = await db.collection('deposits').where('status', '==', 'pending').get();
-        document.getElementById('badgeDeposits').textContent = depSnap.size;
-        const depList = document.getElementById('depositsList');
-        if (depSnap.empty) {
-            depList.innerHTML = '<p class="empty">ไม่มีรายการ</p>';
-        } else {
-            depList.innerHTML = depSnap.docs.map(d => {
+        const snap = await db.collection('listings').orderBy('createdAt', 'desc').get();
+        
+        if (snap.empty) {
+            container.innerHTML = '<p class="empty">ไม่มีประกาศ</p>';
+            return;
+        }
+        
+        container.innerHTML = snap.docs.map(d => {
+            const l = d.data();
+            return `
+                <div class="admin-listing-item">
+                    <img src="${l.image || 'https://via.placeholder.com/60'}" alt="">
+                    <div class="info">
+                        <h4>${l.title || 'ไม่มีชื่อ'}</h4>
+                        <p>${getRankName(l.rank)} • ${l.skins || 0} Skins • ${l.sellerName || 'Unknown'}</p>
+                    </div>
+                    <span class="price">฿${(l.price || 0).toLocaleString()}</span>
+                    <span class="status ${l.status}">${getStatusName(l.status)}</span>
+                    <div class="actions">
+                        <button class="btn-view" onclick="viewListingAdmin('${d.id}')"><i class="fas fa-eye"></i></button>
+                        <button class="btn-edit" onclick="editListing('${d.id}')"><i class="fas fa-edit"></i></button>
+                        <button class="btn-delete" onclick="deleteListing('${d.id}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        console.error('Load listings error:', e);
+        container.innerHTML = '<p class="empty">เกิดข้อผิดพลาด</p>';
+    }
+}
+
+function getStatusName(status) {
+    const names = { approved: 'อนุมัติ', pending: 'รออนุมัติ', rejected: 'ปฏิเสธ', sold: 'ขายแล้ว' };
+    return names[status] || status;
+}
+
+// View Listing Full Details (Admin)
+async function viewListingAdmin(id) {
+    try {
+        const doc = await db.collection('listings').doc(id).get();
+        if (!doc.exists) {
+            showToast('ไม่พบประกาศ', 'error');
+            return;
+        }
+        const l = doc.data();
+        const contact = l.contact || {};
+        
+        document.getElementById('viewListingContent').innerHTML = `
+            <div class="listing-detail-view">
+                <div class="images">
+                    <img class="main-image" src="${l.image || 'https://via.placeholder.com/400'}" alt="">
+                </div>
+                <div class="details">
+                    <div class="info-section">
+                        <h3>${l.title || 'ไม่มีชื่อ'}</h3>
+                        <span class="status ${l.status}">${getStatusName(l.status)}</span>
+                    </div>
+                    <div class="info-section">
+                        <div class="info-row"><span class="info-label">Rank</span><span class="info-value">${getRankName(l.rank)}</span></div>
+                        <div class="info-row"><span class="info-label">จำนวน Skins</span><span class="info-value">${l.skins || 0}</span></div>
+                        <div class="info-row"><span class="info-label">ราคา</span><span class="info-value">฿${(l.price || 0).toLocaleString()}</span></div>
+                        <div class="info-row"><span class="info-label">ประเภท</span><span class="info-value">${l.sellType === 'instant' ? 'ขายทันที' : 'ลงตลาด'}</span></div>
+                    </div>
+                    <div class="info-section">
+                        <div class="info-row"><span class="info-label">Skins เด่น</span><span class="info-value">${l.featuredSkins || '-'}</span></div>
+                        <div class="info-row"><span class="info-label">จุดเด่น</span><span class="info-value">${l.highlights || '-'}</span></div>
+                    </div>
+                    <div class="info-section">
+                        <h4>ผู้ขาย</h4>
+                        <div class="info-row"><span class="info-label">ชื่อ</span><span class="info-value">${l.sellerName || 'Unknown'}</span></div>
+                        <div class="info-row"><span class="info-label">ID</span><span class="info-value">${l.sellerId || '-'}</span></div>
+                    </div>
+                    <div class="info-section">
+                        <h4>ช่องทางติดต่อ</h4>
+                        ${contact.facebook ? `<div class="contact-item"><i class="fab fa-facebook"></i>${contact.facebook}</div>` : ''}
+                        ${contact.line ? `<div class="contact-item"><i class="fab fa-line"></i>${contact.line}</div>` : ''}
+                        ${contact.discord ? `<div class="contact-item"><i class="fab fa-discord"></i>${contact.discord}</div>` : ''}
+                        ${contact.phone ? `<div class="contact-item"><i class="fas fa-phone"></i>${contact.phone}</div>` : ''}
+                    </div>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn-secondary" onclick="closeModal('viewListingModal')">ปิด</button>
+                <button class="btn-primary" onclick="closeModal('viewListingModal');editListing('${id}')"><i class="fas fa-edit"></i> แก้ไข</button>
+            </div>
+        `;
+        openModal('viewListingModal');
+    } catch (e) {
+        console.error('View error:', e);
+        showToast('เกิดข้อผิดพลาด', 'error');
+    }
+}
+
+// Edit Listing
+async function editListing(id) {
+    try {
+        const doc = await db.collection('listings').doc(id).get();
+        if (!doc.exists) {
+            showToast('ไม่พบประกาศ', 'error');
+            return;
+        }
+        const l = doc.data();
+        
+        document.getElementById('editListingId').value = id;
+        document.getElementById('editTitle').value = l.title || '';
+        document.getElementById('editRank').value = l.rank || 'gold';
+        document.getElementById('editSkins').value = l.skins || 0;
+        document.getElementById('editPrice').value = l.price || 0;
+        document.getElementById('editFeaturedSkins').value = l.featuredSkins || '';
+        document.getElementById('editHighlights').value = l.highlights || '';
+        document.getElementById('editImage').value = l.image || '';
+        document.getElementById('editStatus').value = l.status || 'pending';
+        
+        openModal('editListingModal');
+    } catch (e) {
+        console.error('Edit error:', e);
+        showToast('เกิดข้อผิดพลาด', 'error');
+    }
+}
+
+async function saveEditListing(e) {
+    e.preventDefault();
+    const id = document.getElementById('editListingId').value;
+    
+    const updates = {
+        title: document.getElementById('editTitle').value,
+        rank: document.getElementById('editRank').value,
+        skins: parseInt(document.getElementById('editSkins').value) || 0,
+        price: parseInt(document.getElementById('editPrice').value) || 0,
+        featuredSkins: document.getElementById('editFeaturedSkins').value,
+        highlights: document.getElementById('editHighlights').value,
+        image: document.getElementById('editImage').value,
+        status: document.getElementById('editStatus').value,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
+    try {
+        await db.collection('listings').doc(id).update(updates);
+        showToast('บันทึกสำเร็จ', 'success');
+        closeModal('editListingModal');
+        loadAllListings();
+        loadListings(); // Refresh marketplace
+    } catch (e) {
+        console.error('Save error:', e);
+        showToast('เกิดข้อผิดพลาด', 'error');
+    }
+}
+
+async function deleteListing(id) {
+    if (!confirm('ต้องการลบประกาศนี้?')) return;
+    try {
+        await db.collection('listings').doc(id).delete();
+        showToast('ลบสำเร็จ', 'success');
+        loadAllListings();
+        loadListings();
+    } catch (e) {
+        console.error('Delete error:', e);
+        showToast('เกิดข้อผิดพลาด', 'error');
+    }
+}
+
+async function approveListing(id) {
+    try {
+        await db.collection('listings').doc(id).update({ 
+            status: 'approved',
+            approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showToast('อนุมัติแล้ว', 'success');
+        loadPendingListings();
+        loadAllListings();
+        loadListings();
+    } catch (e) {
+        console.error('Approve error:', e);
+        showToast('เกิดข้อผิดพลาด', 'error');
+    }
+}
+
+async function rejectListing(id) {
+    const reason = prompt('เหตุผลที่ปฏิเสธ (ไม่บังคับ):');
+    try {
+        await db.collection('listings').doc(id).update({ 
+            status: 'rejected',
+            rejectReason: reason || '',
+            rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showToast('ปฏิเสธแล้ว', 'success');
+        loadPendingListings();
+        loadAllListings();
+    } catch (e) {
+        console.error('Reject error:', e);
+        showToast('เกิดข้อผิดพลาด', 'error');
+    }
+}
+
+async function loadAdminDeposits() {
+    try {
+        const snap = await db.collection('deposits').where('status', '==', 'pending').get();
+        document.getElementById('badgeDeposits').textContent = snap.size;
+        document.getElementById('depositsList').innerHTML = snap.empty 
+            ? '<p class="empty">ไม่มีรายการ</p>'
+            : snap.docs.map(d => {
                 const dep = d.data();
-                return `<div class="admin-item"><div><strong>฿${dep.amount}</strong><br><small>${dep.method}</small></div>
+                return `<div class="admin-item"><div><strong>฿${dep.amount}</strong><br><small>${dep.method} - ${dep.userId}</small></div>
                 <div><button class="btn-approve" onclick="approveDeposit('${d.id}',${dep.amount},'${dep.userId}')"><i class="fas fa-check"></i></button></div></div>`;
             }).join('');
-        }
-    } catch (e) {}
-    
-    // Load withdrawals
+    } catch (e) {
+        document.getElementById('depositsList').innerHTML = '<p class="empty">Demo Mode</p>';
+    }
+}
+
+async function loadAdminWithdrawals() {
     try {
-        const wdSnap = await db.collection('withdrawals').where('status', '==', 'pending').get();
-        document.getElementById('badgeWithdrawals').textContent = wdSnap.size;
-        const wdList = document.getElementById('withdrawalsList');
-        if (wdSnap.empty) {
-            wdList.innerHTML = '<p class="empty">ไม่มีรายการ</p>';
-        } else {
-            wdList.innerHTML = wdSnap.docs.map(d => {
+        const snap = await db.collection('withdrawals').where('status', '==', 'pending').get();
+        document.getElementById('badgeWithdrawals').textContent = snap.size;
+        document.getElementById('withdrawalsList').innerHTML = snap.empty 
+            ? '<p class="empty">ไม่มีรายการ</p>'
+            : snap.docs.map(d => {
                 const w = d.data();
                 return `<div class="admin-item"><div><strong>฿${w.amount}</strong><br><small>${w.method} - ${w.account}</small></div>
                 <div><button class="btn-approve" onclick="approveWithdraw('${d.id}')"><i class="fas fa-check"></i></button></div></div>`;
             }).join('');
-        }
-    } catch (e) {}
-    
-    // Load users
+    } catch (e) {
+        document.getElementById('withdrawalsList').innerHTML = '<p class="empty">Demo Mode</p>';
+    }
+}
+
+async function loadAdminUsers() {
     try {
-        const usersSnap = await db.collection('users').limit(50).get();
-        document.getElementById('usersTable').innerHTML = usersSnap.docs.map(d => {
+        const snap = await db.collection('users').limit(50).get();
+        document.getElementById('usersTable').innerHTML = snap.docs.map(d => {
             const u = d.data();
             return `<div class="admin-item"><div><strong>${u.username}</strong><br><small>${u.email || u.phone || '-'}</small></div><div>${u.coins || 0} Coins</div></div>`;
         }).join('') || '<p class="empty">ไม่มีผู้ใช้</p>';
     } catch (e) {
         document.getElementById('usersTable').innerHTML = '<p>Demo Mode</p>';
     }
-}
-
-async function approveListing(id) {
-    try {
-        await db.collection('listings').doc(id).update({ status: 'approved' });
-    } catch (e) {}
-    showToast('อนุมัติแล้ว', 'success');
-    loadAdminData();
-    loadListings();
-}
-
-async function rejectListing(id) {
-    try {
-        await db.collection('listings').doc(id).update({ status: 'rejected' });
-    } catch (e) {}
-    showToast('ปฏิเสธแล้ว', 'success');
-    loadAdminData();
 }
 
 async function approveDeposit(id, amount, userId) {
@@ -740,17 +1044,21 @@ async function approveDeposit(id, amount, userId) {
         if (userDoc.exists) {
             await userRef.update({ coins: (userDoc.data().coins || 0) + amount });
         }
-    } catch (e) {}
-    showToast('อนุมัติการเติมเงินแล้ว', 'success');
-    loadAdminData();
+        showToast('อนุมัติการเติมเงินแล้ว', 'success');
+        loadAdminDeposits();
+    } catch (e) {
+        showToast('เกิดข้อผิดพลาด', 'error');
+    }
 }
 
 async function approveWithdraw(id) {
     try {
         await db.collection('withdrawals').doc(id).update({ status: 'approved' });
-    } catch (e) {}
-    showToast('อนุมัติการถอนเงินแล้ว', 'success');
-    loadAdminData();
+        showToast('อนุมัติการถอนเงินแล้ว', 'success');
+        loadAdminWithdrawals();
+    } catch (e) {
+        showToast('เกิดข้อผิดพลาด', 'error');
+    }
 }
 
 function switchAdminTab(tab, el) {
@@ -758,10 +1066,235 @@ function switchAdminTab(tab, el) {
     document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
     document.getElementById('admin-' + tab).classList.add('active');
+    
+    if (tab === 'chats') loadAdminChats();
 }
 
 function searchUsers(q) {
-    // Simple search - demo
+    // Simple filter
+    const items = document.querySelectorAll('#usersTable .admin-item');
+    items.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(q.toLowerCase()) ? 'flex' : 'none';
+    });
+}
+
+// ============================================================
+// Chat System
+// ============================================================
+
+// User Chat Functions
+function toggleChat() {
+    const box = document.getElementById('chatBox');
+    box.classList.toggle('active');
+    if (box.classList.contains('active')) {
+        loadUserChatMessages();
+        markMessagesAsRead();
+    }
+}
+
+async function loadUserChatMessages() {
+    if (!currentUser) return;
+    const container = document.getElementById('userChatMessages');
+    
+    try {
+        const snap = await db.collection('chats')
+            .where('participants', 'array-contains', currentUser.id)
+            .orderBy('createdAt', 'asc')
+            .limit(50)
+            .get();
+        
+        container.innerHTML = snap.docs.map(d => {
+            const m = d.data();
+            const isUser = m.senderId === currentUser.id;
+            return `<div class="chat-message ${isUser ? 'user' : 'admin'}">
+                ${m.message}
+                <span class="time">${formatTime(m.createdAt)}</span>
+            </div>`;
+        }).join('') || '<p style="text-align:center;color:var(--text-muted)">เริ่มแชทกับแอดมิน</p>';
+        
+        container.scrollTop = container.scrollHeight;
+    } catch (e) {
+        console.log('Chat load error:', e);
+    }
+}
+
+async function sendUserMessage() {
+    if (!currentUser) return;
+    const input = document.getElementById('userMessageInput');
+    const message = input.value.trim();
+    if (!message) return;
+    
+    try {
+        await db.collection('chats').add({
+            message,
+            senderId: currentUser.id,
+            senderName: currentUser.username,
+            senderAvatar: currentUser.avatar,
+            participants: [currentUser.id, 'admin'],
+            isFromAdmin: false,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        input.value = '';
+        loadUserChatMessages();
+    } catch (e) {
+        console.error('Send error:', e);
+        showToast('ส่งข้อความไม่สำเร็จ', 'error');
+    }
+}
+
+async function markMessagesAsRead() {
+    if (!currentUser) return;
+    try {
+        const snap = await db.collection('chats')
+            .where('participants', 'array-contains', currentUser.id)
+            .where('isFromAdmin', '==', true)
+            .where('read', '==', false)
+            .get();
+        
+        const batch = db.batch();
+        snap.docs.forEach(doc => batch.update(doc.ref, { read: true }));
+        await batch.commit();
+        
+        document.getElementById('chatUnread').style.display = 'none';
+    } catch (e) {
+        console.log('Mark read error:', e);
+    }
+}
+
+// Admin Chat Functions
+async function loadAdminChats() {
+    const container = document.getElementById('chatUsersList');
+    
+    try {
+        // Get unique users who have chatted
+        const snap = await db.collection('chats')
+            .where('participants', 'array-contains', 'admin')
+            .orderBy('createdAt', 'desc')
+            .get();
+        
+        // Group by user
+        const userChats = {};
+        snap.docs.forEach(d => {
+            const m = d.data();
+            const oderId = m.senderId === 'admin' ? m.participants.find(p => p !== 'admin') : m.senderId;
+            if (!userChats[oderId]) {
+                userChats[oderId] = {
+                    oderId,
+                    name: m.senderName,
+                    avatar: m.senderAvatar || 'https://via.placeholder.com/40',
+                    lastMessage: m.message,
+                    unread: !m.read && m.isFromAdmin === false ? 1 : 0
+                };
+            } else if (!m.read && m.isFromAdmin === false) {
+                userChats[oderId].unread++;
+            }
+        });
+        
+        const users = Object.values(userChats);
+        document.getElementById('badgeChats').textContent = users.reduce((sum, u) => sum + u.unread, 0);
+        
+        container.innerHTML = users.length === 0 
+            ? '<p class="empty" style="padding:20px">ไม่มีแชท</p>'
+            : users.map(u => `
+                <div class="chat-user-item ${selectedChatUser === u.oderId ? 'active' : ''}" onclick="selectChatUser('${u.oderId}')">
+                    <img src="${u.avatar}" alt="">
+                    <div class="info">
+                        <div class="name">${u.name || 'Unknown'}</div>
+                        <div class="preview">${u.lastMessage || ''}</div>
+                    </div>
+                    ${u.unread > 0 ? `<span class="unread-badge">${u.unread}</span>` : ''}
+                </div>
+            `).join('');
+    } catch (e) {
+        console.error('Load chats error:', e);
+        container.innerHTML = '<p class="empty" style="padding:20px">Demo Mode</p>';
+    }
+}
+
+async function selectChatUser(oderId) {
+    selectedChatUser = oderId;
+    document.querySelectorAll('.chat-user-item').forEach(el => el.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    
+    document.getElementById('chatHeader').innerHTML = `<span>แชทกับ ${event.currentTarget.querySelector('.name').textContent}</span>`;
+    document.getElementById('adminChatInput').style.display = 'flex';
+    
+    await loadAdminChatMessages(oderId);
+    await markAdminMessagesAsRead(oderId);
+}
+
+async function loadAdminChatMessages(oderId) {
+    const container = document.getElementById('adminChatMessages');
+    
+    try {
+        const snap = await db.collection('chats')
+            .where('participants', 'array-contains', oderId)
+            .orderBy('createdAt', 'asc')
+            .get();
+        
+        container.innerHTML = snap.docs.map(d => {
+            const m = d.data();
+            const isAdmin = m.isFromAdmin;
+            return `<div class="chat-message ${isAdmin ? 'user' : 'admin'}">
+                ${m.message}
+                <span class="time">${formatTime(m.createdAt)}</span>
+            </div>`;
+        }).join('');
+        
+        container.scrollTop = container.scrollHeight;
+    } catch (e) {
+        console.error('Load messages error:', e);
+    }
+}
+
+async function markAdminMessagesAsRead(oderId) {
+    try {
+        const snap = await db.collection('chats')
+            .where('participants', 'array-contains', oderId)
+            .where('isFromAdmin', '==', false)
+            .where('read', '==', false)
+            .get();
+        
+        const batch = db.batch();
+        snap.docs.forEach(doc => batch.update(doc.ref, { read: true }));
+        await batch.commit();
+        
+        loadAdminChats();
+    } catch (e) {
+        console.log('Mark read error:', e);
+    }
+}
+
+async function sendAdminMessage() {
+    if (!selectedChatUser) return;
+    const input = document.getElementById('adminMessageInput');
+    const message = input.value.trim();
+    if (!message) return;
+    
+    try {
+        await db.collection('chats').add({
+            message,
+            senderId: 'admin',
+            senderName: 'Admin',
+            participants: [selectedChatUser, 'admin'],
+            isFromAdmin: true,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        input.value = '';
+        loadAdminChatMessages(selectedChatUser);
+    } catch (e) {
+        console.error('Send error:', e);
+        showToast('ส่งข้อความไม่สำเร็จ', 'error');
+    }
+}
+
+function formatTime(timestamp) {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 }
 
 // ============================================================

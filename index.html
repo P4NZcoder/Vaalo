@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VALO MARKET - ตลาดซื้อขายไอดี Valorant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="bg-animation"><div class="gradient-orb orb-1"></div><div class="gradient-orb orb-2"></div><div class="gradient-orb orb-3"></div></div>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo" onclick="showPage('home')"><i class="fas fa-gamepad"></i><span>VALO<span class="accent">MARKET</span></span></div>
+            <div class="nav-links">
+                <a class="nav-link active" onclick="showPage('home')"><i class="fas fa-home"></i> หน้าแรก</a>
+                <a class="nav-link" onclick="showPage('marketplace')"><i class="fas fa-store"></i> ตลาด</a>
+                <a class="nav-link" onclick="showPage('sell')"><i class="fas fa-tags"></i> ขายไอดี</a>
+                <a class="nav-link" onclick="showPage('membership')"><i class="fas fa-crown"></i> สมาชิก</a>
+            </div>
+            <div class="nav-actions">
+                <div class="coins-display" id="coinsDisplay" style="display:none;"><i class="fas fa-coins"></i><span id="userCoins">0</span><button class="btn-add-coins" onclick="showDepositModal()">+</button></div>
+                <button class="btn-auth" id="btnAuth" onclick="showAuthModal()"><i class="fas fa-user"></i> เข้าสู่ระบบ</button>
+                <div class="user-menu" id="userMenu" style="display:none;">
+                    <div class="user-avatar" onclick="toggleUserDropdown()"><img src="https://via.placeholder.com/30" id="userAvatar"><span id="userName">User</span><i class="fas fa-chevron-down"></i></div>
+                    <div class="user-dropdown" id="userDropdown">
+                        <a onclick="showPage('dashboard')"><i class="fas fa-tachometer-alt"></i> แดชบอร์ด</a>
+                        <a onclick="showDepositModal()"><i class="fas fa-plus-circle"></i> เติม Coins</a>
+                        <a onclick="showWithdrawModal()"><i class="fas fa-minus-circle"></i> ถอนเงิน</a>
+                        <hr>
+                        <a onclick="logout()"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</a>
+                    </div>
+                </div>
+                <button class="btn-admin" onclick="showAdminLogin()"><i class="fas fa-cog"></i></button>
+            </div>
+        </div>
+    </nav>
+    <main class="main-content">
+        <!-- Home -->
+        <div class="page active" id="page-home">
+            <section class="hero-section">
+                <div class="hero-content">
+                    <h1 class="hero-title"><span>ซื้อขาย</span><span class="gradient-text">ไอดี VALORANT</span><span>ปลอดภัย 100%</span></h1>
+                    <p class="hero-subtitle">ตลาดซื้อขายไอดี Valorant ที่ใหญ่ที่สุดในไทย</p>
+                    <div class="hero-actions"><button class="btn-primary btn-large" onclick="showPage('marketplace')"><i class="fas fa-shopping-cart"></i> เริ่มซื้อเลย</button><button class="btn-secondary btn-large" onclick="showPage('sell')"><i class="fas fa-hand-holding-usd"></i> ขายไอดี</button></div>
+                    <div class="hero-stats"><div class="stat-item"><span class="stat-number" id="statSales">0</span><span class="stat-label">ขายแล้ว</span></div><div class="stat-item"><span class="stat-number" id="statUsers">0</span><span class="stat-label">ผู้ใช้</span></div><div class="stat-item"><span class="stat-number">99%</span><span class="stat-label">พึงพอใจ</span></div></div>
+                </div>
+                <div class="hero-visual"><div class="floating-card card-1"><div class="card-rank radiant"><i class="fas fa-crown"></i> Radiant</div><div class="card-price">฿12,500</div></div><div class="floating-card card-2"><div class="card-rank immortal"><i class="fas fa-fire"></i> Immortal</div><div class="card-price">฿8,900</div></div><div class="floating-card card-3"><div class="card-rank diamond"><i class="fas fa-gem"></i> Diamond</div><div class="card-price">฿3,500</div></div></div>
+            </section>
+            <section class="features-section">
+                <h2 class="section-title">ทำไมต้องเลือกเรา?</h2>
+                <div class="features-grid"><div class="feature-card"><div class="feature-icon"><i class="fas fa-shield-alt"></i></div><h3>ปลอดภัย 100%</h3><p>ระบบ Escrow ปกป้องทุกคน</p></div><div class="feature-card"><div class="feature-icon"><i class="fas fa-clock"></i></div><h3>รวดเร็วทันใจ</h3><p>รับไอดีทันที</p></div><div class="feature-card"><div class="feature-icon"><i class="fas fa-medal"></i></div><h3>ประกันไอดี</h3><p>สูงสุด 60 วัน</p></div><div class="feature-card"><div class="feature-icon"><i class="fas fa-headset"></i></div><h3>ซัพพอร์ต 24/7</h3><p>พร้อมช่วยเหลือ</p></div></div>
+            </section>
+        </div>
+        <!-- Marketplace -->
+        <div class="page" id="page-marketplace">
+            <div class="marketplace-container">
+                <div class="marketplace-header"><h1><i class="fas fa-store"></i> ตลาดไอดี</h1><div class="search-bar"><i class="fas fa-search"></i><input type="text" id="searchInput" placeholder="ค้นหา..." oninput="filterListings()"></div></div>
+                <div class="filter-section">
+                    <select id="filterPrice" onchange="filterListings()"><option value="">ราคา: ทั้งหมด</option><option value="0-1000">ต่ำกว่า ฿1,000</option><option value="1000-3000">฿1,000 - ฿3,000</option><option value="3000-5000">฿3,000 - ฿5,000</option><option value="5000-10000">฿5,000 - ฿10,000</option><option value="10000-999999">มากกว่า ฿10,000</option></select>
+                    <select id="filterRank" onchange="filterListings()"><option value="">Rank: ทั้งหมด</option><option value="radiant">Radiant</option><option value="immortal">Immortal</option><option value="ascendant">Ascendant</option><option value="diamond">Diamond</option><option value="platinum">Platinum</option><option value="gold">Gold</option><option value="silver">Silver</option><option value="bronze">Bronze</option><option value="iron">Iron</option></select>
+                    <select id="filterSkins" onchange="filterListings()"><option value="">Skins: ทั้งหมด</option><option value="0-10">0-10</option><option value="10-30">10-30</option><option value="30-50">30-50</option><option value="50-999">50+</option></select>
+                    <button class="btn-reset" onclick="resetFilters()"><i class="fas fa-redo"></i></button>
+                </div>
+                <div class="listings-grid" id="listingsGrid"></div>
+            </div>
+        </div>
+        <!-- Sell -->
+        <div class="page" id="page-sell">
+            <div class="sell-container">
+                <h1><i class="fas fa-tags"></i> ขายไอดี Valorant</h1>
+                <div class="sell-options"><div class="sell-option selected" onclick="selectSellOption('market',this)"><i class="fas fa-store"></i><h3>ลงตลาด</h3><p>ค่าธรรมเนียม 10%</p></div><div class="sell-option" onclick="selectSellOption('instant',this)"><i class="fas fa-bolt"></i><h3>ขายทันที</h3><p>รับ 85%</p></div></div>
+                <form class="sell-form" id="sellForm" onsubmit="submitListing(event)">
+                    <input type="hidden" id="sellType" value="market">
+                    <div class="form-row"><div class="form-group"><label>Rank ปัจจุบัน</label><select id="listingRank" required><option value="">เลือก</option><option value="radiant">Radiant</option><option value="immortal">Immortal</option><option value="ascendant">Ascendant</option><option value="diamond">Diamond</option><option value="platinum">Platinum</option><option value="gold">Gold</option><option value="silver">Silver</option><option value="bronze">Bronze</option><option value="iron">Iron</option></select></div><div class="form-group"><label>Peak Rank</label><select id="listingPeakRank"><option value="">เลือก</option><option value="radiant">Radiant</option><option value="immortal">Immortal</option><option value="ascendant">Ascendant</option><option value="diamond">Diamond</option><option value="platinum">Platinum</option><option value="gold">Gold</option></select></div></div>
+                    <div class="form-row"><div class="form-group"><label>จำนวน Skins</label><input type="number" id="listingSkins" min="0" required placeholder="0"></div><div class="form-group"><label>ราคา (บาท)</label><input type="number" id="listingPrice" min="100" required placeholder="100"></div></div>
+                    <div class="form-group"><label>Skins เด่น</label><textarea id="listingFeaturedSkins" placeholder="เช่น Elderflame Vandal"></textarea></div>
+                    <div class="form-group"><label>จุดเด่น</label><textarea id="listingHighlights" placeholder="เช่น มี VP เหลือ"></textarea></div>
+                    <div class="form-group"><label>รูปภาพ</label><div class="image-upload" onclick="document.getElementById('listingImages').click()"><input type="file" id="listingImages" accept="image/*" multiple hidden onchange="previewImages(event)"><div id="uploadPlaceholder"><i class="fas fa-cloud-upload-alt"></i><p>คลิกอัพโหลด</p></div><div class="image-previews" id="imagePreviews"></div></div></div>
+                    <div class="contact-section"><h3>ช่องทางติดต่อ (อย่างน้อย 1)</h3><div class="form-row"><div class="form-group"><label><i class="fab fa-facebook"></i> Facebook</label><input type="text" id="contactFacebook"></div><div class="form-group"><label><i class="fab fa-line"></i> Line</label><input type="text" id="contactLine"></div></div><div class="form-row"><div class="form-group"><label><i class="fab fa-discord"></i> Discord</label><input type="text" id="contactDiscord"></div><div class="form-group"><label><i class="fas fa-phone"></i> โทร</label><input type="tel" id="contactPhoneSell"></div></div></div>
+                    <button type="submit" class="btn-primary btn-large"><i class="fas fa-paper-plane"></i> ส่งขาย</button>
+                </form>
+            </div>
+        </div>
+        <!-- Membership -->
+        <div class="page" id="page-membership">
+            <h2 class="section-title">แพ็กเกจสมาชิก</h2>
+            <div class="membership-grid">
+                <div class="membership-card bronze"><span class="badge">BRONZE</span><div class="price">99 <small>Coins/เดือน</small></div><ul><li><i class="fas fa-check"></i> ลดค่าธรรมเนียม 2%</li><li><i class="fas fa-check"></i> Badge Bronze</li></ul><button onclick="buyMembership('bronze',99)">สมัคร</button></div>
+                <div class="membership-card silver"><span class="popular">ยอดนิยม</span><span class="badge">SILVER</span><div class="price">199 <small>Coins/เดือน</small></div><ul><li><i class="fas fa-check"></i> ลดค่าธรรมเนียม 4%</li><li><i class="fas fa-check"></i> Badge Silver</li><li><i class="fas fa-check"></i> โปรโมทประกาศ</li></ul><button onclick="buyMembership('silver',199)">สมัคร</button></div>
+                <div class="membership-card gold"><span class="badge">GOLD</span><div class="price">299 <small>Coins/เดือน</small></div><ul><li><i class="fas fa-check"></i> ลดค่าธรรมเนียม 6%</li><li><i class="fas fa-check"></i> Badge Gold</li><li><i class="fas fa-check"></i> ถอนเงินด่วน</li></ul><button onclick="buyMembership('gold',299)">สมัคร</button></div>
+            </div>
+        </div>
+        <!-- Dashboard -->
+        <div class="page" id="page-dashboard">
+            <div class="dashboard-container">
+                <h1><i class="fas fa-tachometer-alt"></i> แดชบอร์ด</h1>
+                <div class="dashboard-tabs"><button class="tab-btn active" onclick="switchDashboardTab('overview',this)">ภาพรวม</button><button class="tab-btn" onclick="switchDashboardTab('sales',this)">การขาย</button><button class="tab-btn" onclick="switchDashboardTab('purchases',this)">การซื้อ</button><button class="tab-btn" onclick="switchDashboardTab('transactions',this)">ธุรกรรม</button></div>
+                <div class="dashboard-tab active" id="tab-overview">
+                    <div class="stats-cards"><div class="stat-card"><i class="fas fa-coins"></i><div><span id="dashCoins">0</span><small>Coins</small></div></div><div class="stat-card"><i class="fas fa-chart-line"></i><div><span id="dashSales">0</span><small>ขายแล้ว</small></div></div><div class="stat-card"><i class="fas fa-clock"></i><div><span id="dashPending">0</span><small>รออนุมัติ</small></div></div><div class="stat-card"><i class="fas fa-star"></i><div><span id="dashRating">-</span><small>คะแนน</small></div></div></div>
+                    <div class="quick-actions"><button onclick="showPage('sell')"><i class="fas fa-plus"></i> ลงขาย</button><button onclick="showDepositModal()"><i class="fas fa-wallet"></i> เติม</button><button onclick="showWithdrawModal()"><i class="fas fa-money-bill"></i> ถอน</button></div>
+                </div>
+                <div class="dashboard-tab" id="tab-sales"><div id="salesList" class="list-container"><p class="empty">ยังไม่มีการขาย</p></div></div>
+                <div class="dashboard-tab" id="tab-purchases"><div id="purchasesList" class="list-container"><p class="empty">ยังไม่มีการซื้อ</p></div></div>
+                <div class="dashboard-tab" id="tab-transactions"><div id="transactionsList" class="list-container"><p class="empty">ยังไม่มีธุรกรรม</p></div></div>
+            </div>
+        </div>
+        <!-- Listing Detail -->
+        <div class="page" id="page-listing-detail"><div id="listingDetailContent"></div></div>
+        <!-- Admin -->
+        <div class="page" id="page-admin">
+            <div class="admin-container">
+                <div class="admin-sidebar">
+                    <div class="admin-logo"><i class="fas fa-cog"></i> Admin</div>
+                    <nav><div class="nav-item active" onclick="switchAdminTab('pending',this)"><i class="fas fa-clock"></i> รออนุมัติ <span class="badge" id="badgePending">0</span></div><div class="nav-item" onclick="switchAdminTab('listings',this)"><i class="fas fa-list"></i> ประกาศ</div><div class="nav-item" onclick="switchAdminTab('users',this)"><i class="fas fa-users"></i> ผู้ใช้</div><div class="nav-item" onclick="switchAdminTab('deposits',this)"><i class="fas fa-plus-circle"></i> เติมเงิน <span class="badge" id="badgeDeposits">0</span></div><div class="nav-item" onclick="switchAdminTab('withdrawals',this)"><i class="fas fa-minus-circle"></i> ถอนเงิน <span class="badge" id="badgeWithdrawals">0</span></div><div class="nav-item" onclick="switchAdminTab('reports',this)"><i class="fas fa-chart-bar"></i> รายงาน</div></nav>
+                    <button class="btn-logout" onclick="logoutAdmin()"><i class="fas fa-sign-out-alt"></i> ออก</button>
+                </div>
+                <div class="admin-content">
+                    <div class="admin-tab active" id="admin-pending"><h2>รออนุมัติ</h2><div id="pendingList"></div></div>
+                    <div class="admin-tab" id="admin-listings"><h2>ประกาศทั้งหมด</h2><div id="adminListingsTable"></div></div>
+                    <div class="admin-tab" id="admin-users"><h2>ผู้ใช้</h2><input type="text" placeholder="ค้นหา..." oninput="searchUsers(this.value)"><div id="usersTable"></div></div>
+                    <div class="admin-tab" id="admin-deposits"><h2>เติมเงิน</h2><div id="depositsList"></div></div>
+                    <div class="admin-tab" id="admin-withdrawals"><h2>ถอนเงิน</h2><div id="withdrawalsList"></div></div>
+                    <div class="admin-tab" id="admin-reports"><h2>รายงาน</h2><div class="report-cards"><div class="report-card"><h3>ยอดวันนี้</h3><div id="todayRevenue">฿0</div></div><div class="report-card"><h3>ยอดเดือน</h3><div id="monthRevenue">฿0</div></div><div class="report-card"><h3>จำนวนขาย</h3><div id="totalSalesCount">0</div></div><div class="report-card"><h3>ค่าธรรมเนียม</h3><div id="totalFees">฿0</div></div></div></div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <!-- Modals -->
+    <div class="modal" id="authModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('authModal')">&times;</button>
+            <div class="auth-tabs"><button class="active" onclick="switchAuthTab('login',this)">เข้าสู่ระบบ</button><button onclick="switchAuthTab('register',this)">สมัครสมาชิก</button></div>
+            <div class="auth-form active" id="loginForm">
+                <h2>ยินดีต้อนรับ!</h2>
+                <button class="btn-google" onclick="loginWithGoogle()"><i class="fab fa-google"></i> เข้าสู่ระบบด้วย Google</button>
+                <div class="divider"><span>หรือ</span></div>
+                <div class="form-group"><label>เบอร์โทร</label><input type="tel" id="loginPhone" placeholder="0xxxxxxxxx" maxlength="10"></div>
+                <button class="btn-primary" onclick="sendOTP('login')">ส่ง OTP</button>
+                <div class="otp-section" id="loginOtpGroup" style="display:none">
+                    <label>กรอก OTP</label>
+                    <div class="otp-inputs"><input maxlength="1" oninput="handleOtpInput(this,0,'login')"><input maxlength="1" oninput="handleOtpInput(this,1,'login')"><input maxlength="1" oninput="handleOtpInput(this,2,'login')"><input maxlength="1" oninput="handleOtpInput(this,3,'login')"><input maxlength="1" oninput="handleOtpInput(this,4,'login')"><input maxlength="1" oninput="handleOtpInput(this,5,'login')"></div>
+                    <p>หมดอายุใน <span id="loginTimer">60</span> วินาที</p>
+                    <button class="btn-secondary" id="loginResend" disabled onclick="sendOTP('login')">ส่งใหม่</button>
+                    <button class="btn-primary" onclick="verifyOTP('login')">ยืนยัน</button>
+                </div>
+            </div>
+            <div class="auth-form" id="registerForm">
+                <h2>สมัครสมาชิก</h2>
+                <button class="btn-google" onclick="loginWithGoogle()"><i class="fab fa-google"></i> สมัครด้วย Google</button>
+                <div class="divider"><span>หรือ</span></div>
+                <div class="form-group"><label>ชื่อผู้ใช้</label><input type="text" id="registerUsername" placeholder="ตั้งชื่อ"></div>
+                <div class="form-group"><label>เบอร์โทร</label><input type="tel" id="registerPhone" placeholder="0xxxxxxxxx" maxlength="10"></div>
+                <div class="form-group"><label>ประเภท</label><div class="user-type"><label><input type="radio" name="userType" value="buyer" checked>ผู้ซื้อ</label><label><input type="radio" name="userType" value="seller">ผู้ขาย</label><label><input type="radio" name="userType" value="both">ทั้งสอง</label></div></div>
+                <button class="btn-primary" onclick="sendOTP('register')">ส่ง OTP</button>
+                <div class="otp-section" id="registerOtpGroup" style="display:none">
+                    <label>กรอก OTP</label>
+                    <div class="otp-inputs"><input maxlength="1" oninput="handleOtpInput(this,0,'register')"><input maxlength="1" oninput="handleOtpInput(this,1,'register')"><input maxlength="1" oninput="handleOtpInput(this,2,'register')"><input maxlength="1" oninput="handleOtpInput(this,3,'register')"><input maxlength="1" oninput="handleOtpInput(this,4,'register')"><input maxlength="1" oninput="handleOtpInput(this,5,'register')"></div>
+                    <p>หมดอายุใน <span id="registerTimer">60</span> วินาที</p>
+                    <button class="btn-secondary" id="registerResend" disabled onclick="sendOTP('register')">ส่งใหม่</button>
+                    <button class="btn-primary" onclick="verifyOTP('register')">ยืนยัน</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal" id="adminLoginModal">
+        <div class="modal-content small">
+            <button class="close-btn" onclick="closeModal('adminLoginModal')">&times;</button>
+            <h2><i class="fas fa-user-shield"></i> Admin</h2>
+            <p>รหัส: admin123</p>
+            <input type="password" id="adminPassword" placeholder="รหัสผ่าน" onkeypress="if(event.key==='Enter')loginAdmin()">
+            <button class="btn-primary" onclick="loginAdmin()">เข้าสู่ระบบ</button>
+        </div>
+    </div>
+    <div class="modal" id="depositModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('depositModal')">&times;</button>
+            <h2><i class="fas fa-coins"></i> เติม Coins</h2>
+            <p>1 บาท = 1 Coin</p>
+            <div class="amount-btns"><button onclick="selectDepositAmount(100,this)">฿100</button><button onclick="selectDepositAmount(300,this)">฿300</button><button class="selected" onclick="selectDepositAmount(500,this)">฿500</button><button onclick="selectDepositAmount(1000,this)">฿1,000</button><button onclick="selectDepositAmount(3000,this)">฿3,000</button></div>
+            <div class="form-group"><label>จำนวน (ขั้นต่ำ 50)</label><input type="number" id="depositAmount" value="500" min="50"></div>
+            <div class="payment-methods"><label><input type="radio" name="paymentMethod" value="promptpay" checked>พร้อมเพย์</label><label><input type="radio" name="paymentMethod" value="truewallet">TrueMoney</label><label><input type="radio" name="paymentMethod" value="bank">ธนาคาร</label></div>
+            <button class="btn-primary" onclick="processDeposit()">ดำเนินการ</button>
+        </div>
+    </div>
+    <div class="modal" id="paymentQRModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('paymentQRModal')">&times;</button>
+            <h2><i class="fas fa-qrcode"></i> ชำระเงิน</h2>
+            <div class="qr-code">[QR Demo]</div>
+            <p>จำนวน: <strong id="paymentAmountDisplay">฿500</strong></p>
+            <p id="paymentMethodDisplay">พร้อมเพย์</p>
+            <p id="bankAccountInfo">081-234-5678</p>
+            <div class="form-group"><label>อัพโหลดสลิป</label><input type="file" id="slipUpload" accept="image/*" onchange="previewSlip(event)"><div id="slipPreview"></div></div>
+            <button class="btn-primary" onclick="submitPaymentSlip()">ยืนยัน</button>
+        </div>
+    </div>
+    <div class="modal" id="withdrawModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('withdrawModal')">&times;</button>
+            <h2><i class="fas fa-money-bill-wave"></i> ถอนเงิน</h2>
+            <p>Coins: <strong id="withdrawBalance">0</strong></p>
+            <div class="form-group"><label>จำนวน (ขั้นต่ำ 100)</label><input type="number" id="withdrawAmount" min="100"></div>
+            <div class="form-group"><label>ช่องทาง</label><select id="withdrawMethod" onchange="toggleBankFields()"><option value="promptpay">พร้อมเพย์</option><option value="truewallet">TrueMoney</option><option value="bank">ธนาคาร</option></select></div>
+            <div class="form-group"><label id="accountLabel">เบอร์</label><input type="text" id="withdrawAccount" placeholder="0xxxxxxxxx"></div>
+            <div id="bankFields" style="display:none"><div class="form-group"><label>ธนาคาร</label><select id="withdrawBank"><option>กสิกร</option><option>ไทยพาณิชย์</option><option>กรุงเทพ</option><option>กรุงไทย</option></select></div><div class="form-group"><label>ชื่อบัญชี</label><input type="text" id="withdrawAccountName"></div></div>
+            <button class="btn-primary" onclick="processWithdraw()">ส่งคำขอ</button>
+        </div>
+    </div>
+    <div class="modal" id="purchaseModal"><div class="modal-content" id="purchaseContent"></div></div>
+    <div class="modal" id="contactInfoModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('contactInfoModal')">&times;</button>
+            <h2><i class="fas fa-check-circle" style="color:#4ade80"></i> ซื้อสำเร็จ!</h2>
+            <p>ติดต่อผู้ขาย:</p>
+            <div id="sellerContactDetails"></div>
+            <button class="btn-primary" onclick="closeModal('contactInfoModal')">ตกลง</button>
+        </div>
+    </div>
+    <div class="toast-container" id="toastContainer"></div>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

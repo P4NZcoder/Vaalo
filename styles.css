@@ -709,21 +709,6 @@ body {
 .btn-google:hover { background: #f0f0f0; }
 .divider { display: flex; align-items: center; gap: 15px; margin: 20px 0; color: var(--text-muted); }
 .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-.otp-section { margin-top: 20px; }
-.otp-inputs { display: flex; gap: 10px; justify-content: center; margin: 15px 0; }
-.otp-inputs input {
-    width: 45px;
-    height: 55px;
-    text-align: center;
-    font-size: 1.5rem;
-    background: var(--secondary);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--text);
-}
-.otp-inputs input:focus { border-color: var(--primary); outline: none; }
-.user-type { display: flex; gap: 15px; }
-.user-type label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
 
 /* Deposit Modal */
 .amount-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
@@ -803,4 +788,294 @@ body {
     .admin-container { flex-direction: column; }
     .admin-sidebar { width: 100%; }
     .detail-grid { grid-template-columns: 1fr; }
+}
+
+/* Chat Widget for Users */
+.chat-widget {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1500;
+}
+.chat-widget-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: 0 5px 20px rgba(255,70,85,0.4);
+    transition: transform 0.3s;
+    position: relative;
+}
+.chat-widget-btn:hover { transform: scale(1.1); }
+.chat-unread {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--error);
+    color: white;
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 20px;
+    text-align: center;
+}
+.chat-widget-box {
+    position: absolute;
+    bottom: 70px;
+    right: 0;
+    width: 350px;
+    height: 450px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+.chat-widget-box.active { display: flex; }
+.chat-widget-header {
+    padding: 15px;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.chat-widget-header button {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+.chat-widget-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.chat-message {
+    max-width: 80%;
+    padding: 10px 15px;
+    border-radius: 15px;
+    font-size: 0.9rem;
+}
+.chat-message.user {
+    align-self: flex-end;
+    background: var(--primary);
+    color: white;
+    border-bottom-right-radius: 5px;
+}
+.chat-message.admin {
+    align-self: flex-start;
+    background: var(--secondary);
+    color: var(--text);
+    border-bottom-left-radius: 5px;
+}
+.chat-message .time {
+    font-size: 0.7rem;
+    opacity: 0.7;
+    margin-top: 5px;
+    display: block;
+}
+.chat-widget-input {
+    padding: 10px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+}
+.chat-widget-input input {
+    flex: 1;
+    padding: 10px 15px;
+    background: var(--secondary);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text);
+    font-family: inherit;
+}
+.chat-widget-input input:focus { outline: none; border-color: var(--primary); }
+.chat-widget-input button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--primary);
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+/* Admin Chat */
+.chat-admin-container {
+    display: flex;
+    height: 500px;
+    background: var(--secondary);
+    border-radius: 12px;
+    overflow: hidden;
+}
+.chat-users-list {
+    width: 250px;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+}
+.chat-user-item {
+    padding: 15px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: background 0.3s;
+}
+.chat-user-item:hover, .chat-user-item.active { background: var(--card-hover); }
+.chat-user-item img { width: 40px; height: 40px; border-radius: 50%; }
+.chat-user-item .info { flex: 1; }
+.chat-user-item .name { font-weight: 500; }
+.chat-user-item .preview { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-user-item .unread-badge { background: var(--primary); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; }
+.chat-messages-area { flex: 1; display: flex; flex-direction: column; }
+.chat-header {
+    padding: 15px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+}
+#adminChatMessages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.chat-input-area {
+    padding: 10px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    background: var(--card);
+}
+.chat-input-area input {
+    flex: 1;
+    padding: 12px 15px;
+    background: var(--secondary);
+    border: 1px solid var(--border);
+    border-radius: 25px;
+    color: var(--text);
+    font-family: inherit;
+}
+.chat-input-area button {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: var(--primary);
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+/* Admin Listing Detail View */
+.listing-detail-view {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+.listing-detail-view .images { display: flex; flex-direction: column; gap: 10px; }
+.listing-detail-view .main-image { width: 100%; border-radius: 12px; }
+.listing-detail-view .info-section { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+.listing-detail-view .info-section:last-child { border-bottom: none; }
+.listing-detail-view .info-row { display: flex; justify-content: space-between; padding: 8px 0; }
+.listing-detail-view .info-label { color: var(--text-muted); }
+.listing-detail-view .info-value { font-weight: 500; }
+.listing-detail-view .contact-item { display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--secondary); border-radius: 8px; margin-bottom: 8px; }
+.listing-detail-view .contact-item i { color: var(--primary); width: 20px; }
+
+/* Admin Pending List - Full Details */
+.pending-item {
+    background: var(--secondary);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+.pending-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+.pending-item-header h3 { margin: 0; }
+.pending-item-header .actions { display: flex; gap: 10px; }
+.pending-item-grid {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 20px;
+}
+.pending-item-grid img { width: 150px; height: 150px; object-fit: cover; border-radius: 8px; }
+.pending-item-info { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pending-item-info .field { padding: 8px; background: var(--card); border-radius: 6px; }
+.pending-item-info .field label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 3px; }
+.pending-item-info .field span { font-weight: 500; }
+.pending-item-contacts { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border); }
+.pending-item-contacts h4 { margin-bottom: 10px; font-size: 0.9rem; color: var(--text-muted); }
+.pending-item-contacts .contact-list { display: flex; gap: 15px; flex-wrap: wrap; }
+.pending-item-contacts .contact-list span { display: flex; align-items: center; gap: 5px; font-size: 0.9rem; }
+.pending-item-contacts .contact-list i { color: var(--primary); }
+
+/* Modal Large */
+.modal-content.modal-large { max-width: 700px; }
+.form-actions { display: flex; gap: 15px; justify-content: flex-end; margin-top: 20px; }
+
+/* Admin Listings Table */
+.admin-listing-item {
+    display: flex;
+    gap: 15px;
+    padding: 15px;
+    background: var(--secondary);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+.admin-listing-item img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; }
+.admin-listing-item .info { flex: 1; }
+.admin-listing-item .info h4 { margin: 0 0 5px 0; }
+.admin-listing-item .info p { margin: 0; color: var(--text-muted); font-size: 0.85rem; }
+.admin-listing-item .price { font-size: 1.1rem; font-weight: 700; color: var(--primary); }
+.admin-listing-item .status { padding: 4px 10px; border-radius: 15px; font-size: 0.75rem; }
+.admin-listing-item .status.approved { background: rgba(74,222,128,0.2); color: var(--success); }
+.admin-listing-item .status.pending { background: rgba(251,191,36,0.2); color: var(--warning); }
+.admin-listing-item .status.rejected { background: rgba(248,113,113,0.2); color: var(--error); }
+.admin-listing-item .status.sold { background: rgba(0,212,255,0.2); color: var(--accent); }
+.admin-listing-item .actions { display: flex; gap: 8px; }
+.admin-listing-item .actions button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+.btn-view { background: var(--accent); color: white; }
+.btn-edit { background: var(--warning); color: #000; }
+.btn-delete { background: var(--error); color: white; }
+
+/* Admin Login */
+.admin-login-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+.admin-login-header i {
+    font-size: 3rem;
+    color: var(--primary);
+    margin-bottom: 10px;
+    display: block;
+}
+.admin-login-header h2 {
+    margin: 0;
 }

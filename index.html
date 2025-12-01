@@ -33,7 +33,7 @@
                         <a onclick="logout()"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</a>
                     </div>
                 </div>
-                <button class="btn-admin" onclick="showAdminLogin()"><i class="fas fa-cog"></i></button>
+                <!-- Admin access: /admin or Ctrl+Shift+A -->
             </div>
         </div>
     </nav>
@@ -114,7 +114,7 @@
             <div class="admin-container">
                 <div class="admin-sidebar">
                     <div class="admin-logo"><i class="fas fa-cog"></i> Admin</div>
-                    <nav><div class="nav-item active" onclick="switchAdminTab('pending',this)"><i class="fas fa-clock"></i> รออนุมัติ <span class="badge" id="badgePending">0</span></div><div class="nav-item" onclick="switchAdminTab('listings',this)"><i class="fas fa-list"></i> ประกาศ</div><div class="nav-item" onclick="switchAdminTab('users',this)"><i class="fas fa-users"></i> ผู้ใช้</div><div class="nav-item" onclick="switchAdminTab('deposits',this)"><i class="fas fa-plus-circle"></i> เติมเงิน <span class="badge" id="badgeDeposits">0</span></div><div class="nav-item" onclick="switchAdminTab('withdrawals',this)"><i class="fas fa-minus-circle"></i> ถอนเงิน <span class="badge" id="badgeWithdrawals">0</span></div><div class="nav-item" onclick="switchAdminTab('reports',this)"><i class="fas fa-chart-bar"></i> รายงาน</div></nav>
+                    <nav><div class="nav-item active" onclick="switchAdminTab('pending',this)"><i class="fas fa-clock"></i> รออนุมัติ <span class="badge" id="badgePending">0</span></div><div class="nav-item" onclick="switchAdminTab('listings',this)"><i class="fas fa-list"></i> ประกาศ</div><div class="nav-item" onclick="switchAdminTab('users',this)"><i class="fas fa-users"></i> ผู้ใช้</div><div class="nav-item" onclick="switchAdminTab('deposits',this)"><i class="fas fa-plus-circle"></i> เติมเงิน <span class="badge" id="badgeDeposits">0</span></div><div class="nav-item" onclick="switchAdminTab('withdrawals',this)"><i class="fas fa-minus-circle"></i> ถอนเงิน <span class="badge" id="badgeWithdrawals">0</span></div><div class="nav-item" onclick="switchAdminTab('chats',this)"><i class="fas fa-comments"></i> แชท <span class="badge" id="badgeChats">0</span></div><div class="nav-item" onclick="switchAdminTab('reports',this)"><i class="fas fa-chart-bar"></i> รายงาน</div></nav>
                     <button class="btn-logout" onclick="logoutAdmin()"><i class="fas fa-sign-out-alt"></i> ออก</button>
                 </div>
                 <div class="admin-content">
@@ -123,6 +123,7 @@
                     <div class="admin-tab" id="admin-users"><h2>ผู้ใช้</h2><input type="text" placeholder="ค้นหา..." oninput="searchUsers(this.value)"><div id="usersTable"></div></div>
                     <div class="admin-tab" id="admin-deposits"><h2>เติมเงิน</h2><div id="depositsList"></div></div>
                     <div class="admin-tab" id="admin-withdrawals"><h2>ถอนเงิน</h2><div id="withdrawalsList"></div></div>
+                    <div class="admin-tab" id="admin-chats"><h2>แชทกับลูกค้า</h2><div class="chat-admin-container"><div class="chat-users-list" id="chatUsersList"></div><div class="chat-messages-area"><div class="chat-header" id="chatHeader"><span>เลือกแชท</span></div><div class="chat-messages" id="adminChatMessages"></div><div class="chat-input-area" id="adminChatInput" style="display:none"><input type="text" id="adminMessageInput" placeholder="พิมพ์ข้อความ..." onkeypress="if(event.key==='Enter')sendAdminMessage()"><button onclick="sendAdminMessage()"><i class="fas fa-paper-plane"></i></button></div></div></div></div>
                     <div class="admin-tab" id="admin-reports"><h2>รายงาน</h2><div class="report-cards"><div class="report-card"><h3>ยอดวันนี้</h3><div id="todayRevenue">฿0</div></div><div class="report-card"><h3>ยอดเดือน</h3><div id="monthRevenue">฿0</div></div><div class="report-card"><h3>จำนวนขาย</h3><div id="totalSalesCount">0</div></div><div class="report-card"><h3>ค่าธรรมเนียม</h3><div id="totalFees">฿0</div></div></div></div>
                 </div>
             </div>
@@ -137,41 +138,29 @@
                 <h2>ยินดีต้อนรับ!</h2>
                 <button class="btn-google" onclick="loginWithGoogle()"><i class="fab fa-google"></i> เข้าสู่ระบบด้วย Google</button>
                 <div class="divider"><span>หรือ</span></div>
-                <div class="form-group"><label>เบอร์โทร</label><input type="tel" id="loginPhone" placeholder="0xxxxxxxxx" maxlength="10"></div>
-                <button class="btn-primary" onclick="sendOTP('login')">ส่ง OTP</button>
-                <div class="otp-section" id="loginOtpGroup" style="display:none">
-                    <label>กรอก OTP</label>
-                    <div class="otp-inputs"><input maxlength="1" oninput="handleOtpInput(this,0,'login')"><input maxlength="1" oninput="handleOtpInput(this,1,'login')"><input maxlength="1" oninput="handleOtpInput(this,2,'login')"><input maxlength="1" oninput="handleOtpInput(this,3,'login')"><input maxlength="1" oninput="handleOtpInput(this,4,'login')"><input maxlength="1" oninput="handleOtpInput(this,5,'login')"></div>
-                    <p>หมดอายุใน <span id="loginTimer">60</span> วินาที</p>
-                    <button class="btn-secondary" id="loginResend" disabled onclick="sendOTP('login')">ส่งใหม่</button>
-                    <button class="btn-primary" onclick="verifyOTP('login')">ยืนยัน</button>
-                </div>
+                <div class="form-group"><label><i class="fas fa-user"></i> Username หรือ Email</label><input type="text" id="loginUsername" placeholder="กรอก Username หรือ Email"></div>
+                <div class="form-group"><label><i class="fas fa-lock"></i> รหัสผ่าน</label><input type="password" id="loginPassword" placeholder="กรอกรหัสผ่าน" onkeypress="if(event.key==='Enter')loginWithEmail()"></div>
+                <button class="btn-primary" onclick="loginWithEmail()"><i class="fas fa-sign-in-alt"></i> เข้าสู่ระบบ</button>
             </div>
             <div class="auth-form" id="registerForm">
                 <h2>สมัครสมาชิก</h2>
                 <button class="btn-google" onclick="loginWithGoogle()"><i class="fab fa-google"></i> สมัครด้วย Google</button>
                 <div class="divider"><span>หรือ</span></div>
-                <div class="form-group"><label>ชื่อผู้ใช้</label><input type="text" id="registerUsername" placeholder="ตั้งชื่อ"></div>
-                <div class="form-group"><label>เบอร์โทร</label><input type="tel" id="registerPhone" placeholder="0xxxxxxxxx" maxlength="10"></div>
-                <div class="form-group"><label>ประเภท</label><div class="user-type"><label><input type="radio" name="userType" value="buyer" checked>ผู้ซื้อ</label><label><input type="radio" name="userType" value="seller">ผู้ขาย</label><label><input type="radio" name="userType" value="both">ทั้งสอง</label></div></div>
-                <button class="btn-primary" onclick="sendOTP('register')">ส่ง OTP</button>
-                <div class="otp-section" id="registerOtpGroup" style="display:none">
-                    <label>กรอก OTP</label>
-                    <div class="otp-inputs"><input maxlength="1" oninput="handleOtpInput(this,0,'register')"><input maxlength="1" oninput="handleOtpInput(this,1,'register')"><input maxlength="1" oninput="handleOtpInput(this,2,'register')"><input maxlength="1" oninput="handleOtpInput(this,3,'register')"><input maxlength="1" oninput="handleOtpInput(this,4,'register')"><input maxlength="1" oninput="handleOtpInput(this,5,'register')"></div>
-                    <p>หมดอายุใน <span id="registerTimer">60</span> วินาที</p>
-                    <button class="btn-secondary" id="registerResend" disabled onclick="sendOTP('register')">ส่งใหม่</button>
-                    <button class="btn-primary" onclick="verifyOTP('register')">ยืนยัน</button>
-                </div>
+                <div class="form-group"><label><i class="fas fa-envelope"></i> Email</label><input type="email" id="registerEmail" placeholder="กรอก Email"></div>
+                <div class="form-group"><label><i class="fas fa-user"></i> Username</label><input type="text" id="registerUsername" placeholder="ตั้งชื่อผู้ใช้"></div>
+                <div class="form-group"><label><i class="fas fa-lock"></i> รหัสผ่าน</label><input type="password" id="registerPassword" placeholder="ตั้งรหัสผ่าน (อย่างน้อย 6 ตัว)"></div>
+                <div class="form-group"><label><i class="fas fa-lock"></i> ยืนยันรหัสผ่าน</label><input type="password" id="registerConfirmPassword" placeholder="กรอกรหัสผ่านอีกครั้ง"></div>
+                <button class="btn-primary" onclick="registerWithEmail()"><i class="fas fa-user-plus"></i> สมัครสมาชิก</button>
             </div>
         </div>
     </div>
     <div class="modal" id="adminLoginModal">
-        <div class="modal-content small">
+        <div class="modal-content">
             <button class="close-btn" onclick="closeModal('adminLoginModal')">&times;</button>
-            <h2><i class="fas fa-user-shield"></i> Admin</h2>
-            <p>รหัส: admin123</p>
-            <input type="password" id="adminPassword" placeholder="รหัสผ่าน" onkeypress="if(event.key==='Enter')loginAdmin()">
-            <button class="btn-primary" onclick="loginAdmin()">เข้าสู่ระบบ</button>
+            <div class="admin-login-header"><i class="fas fa-user-shield"></i><h2>Admin Login</h2></div>
+            <div class="form-group"><label><i class="fas fa-user"></i> Username</label><input type="text" id="adminUsername" placeholder="กรอก Username"></div>
+            <div class="form-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" id="adminPassword" placeholder="กรอก Password" onkeypress="if(event.key==='Enter')loginAdmin()"></div>
+            <button class="btn-primary" onclick="loginAdmin()"><i class="fas fa-sign-in-alt"></i> เข้าสู่ระบบ</button>
         </div>
     </div>
     <div class="modal" id="depositModal">
@@ -217,6 +206,40 @@
             <p>ติดต่อผู้ขาย:</p>
             <div id="sellerContactDetails"></div>
             <button class="btn-primary" onclick="closeModal('contactInfoModal')">ตกลง</button>
+        </div>
+    </div>
+    <!-- User Chat Widget -->
+    <div class="chat-widget" id="chatWidget" style="display:none">
+        <div class="chat-widget-btn" onclick="toggleChat()"><i class="fas fa-comments"></i><span class="chat-unread" id="chatUnread" style="display:none">0</span></div>
+        <div class="chat-widget-box" id="chatBox">
+            <div class="chat-widget-header"><span><i class="fas fa-headset"></i> แชทกับแอดมิน</span><button onclick="toggleChat()"><i class="fas fa-times"></i></button></div>
+            <div class="chat-widget-messages" id="userChatMessages"></div>
+            <div class="chat-widget-input"><input type="text" id="userMessageInput" placeholder="พิมพ์ข้อความ..." onkeypress="if(event.key==='Enter')sendUserMessage()"><button onclick="sendUserMessage()"><i class="fas fa-paper-plane"></i></button></div>
+        </div>
+    </div>
+    <!-- Admin Edit Listing Modal -->
+    <div class="modal" id="editListingModal">
+        <div class="modal-content modal-large">
+            <button class="close-btn" onclick="closeModal('editListingModal')">&times;</button>
+            <h2><i class="fas fa-edit"></i> แก้ไขประกาศ</h2>
+            <form id="editListingForm" onsubmit="saveEditListing(event)">
+                <input type="hidden" id="editListingId">
+                <div class="form-row"><div class="form-group"><label>ชื่อประกาศ</label><input type="text" id="editTitle" required></div><div class="form-group"><label>Rank</label><select id="editRank"><option value="radiant">Radiant</option><option value="immortal">Immortal</option><option value="ascendant">Ascendant</option><option value="diamond">Diamond</option><option value="platinum">Platinum</option><option value="gold">Gold</option><option value="silver">Silver</option><option value="bronze">Bronze</option><option value="iron">Iron</option></select></div></div>
+                <div class="form-row"><div class="form-group"><label>จำนวน Skins</label><input type="number" id="editSkins" min="0"></div><div class="form-group"><label>ราคา (บาท)</label><input type="number" id="editPrice" min="100"></div></div>
+                <div class="form-group"><label>Skins เด่น</label><textarea id="editFeaturedSkins"></textarea></div>
+                <div class="form-group"><label>จุดเด่น</label><textarea id="editHighlights"></textarea></div>
+                <div class="form-group"><label>รูปภาพ URL</label><input type="text" id="editImage" placeholder="https://..."></div>
+                <div class="form-group"><label>สถานะ</label><select id="editStatus"><option value="approved">อนุมัติ</option><option value="pending">รออนุมัติ</option><option value="rejected">ปฏิเสธ</option><option value="sold">ขายแล้ว</option></select></div>
+                <div class="form-actions"><button type="button" class="btn-secondary" onclick="closeModal('editListingModal')">ยกเลิก</button><button type="submit" class="btn-primary"><i class="fas fa-save"></i> บันทึก</button></div>
+            </form>
+        </div>
+    </div>
+    <!-- Admin View Listing Detail Modal -->
+    <div class="modal" id="viewListingModal">
+        <div class="modal-content modal-large">
+            <button class="close-btn" onclick="closeModal('viewListingModal')">&times;</button>
+            <h2><i class="fas fa-eye"></i> รายละเอียดประกาศ</h2>
+            <div id="viewListingContent"></div>
         </div>
     </div>
     <div class="toast-container" id="toastContainer"></div>
